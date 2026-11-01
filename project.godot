@@ -1,0 +1,33 @@
+; Escena viva de la granja: el mismo proyecto sirve para la demo web (export HTML5), los vídeos de la tienda y
+; de base para los juegos. Los datos (datos/) los genera _tools/web_demo_granja.py --godot desde el pack y el plano.
+config_version=5
+
+[application]
+config/name="Mutoscope Farm - live scene"
+run/main_scene="res://escena.tscn"
+config/features=PackedStringArray("4.7", "GL Compatibility")
+config/icon="res://ui/isotipo.png"
+boot_splash/bg_color=Color(0.109804, 0.0705882, 0.156863, 1)
+boot_splash/show_image=true
+boot_splash/image="res://ui/rotulo_2.png"
+boot_splash/fullsize=false
+boot_splash/use_filter=false
+
+[display]
+window/size/viewport_width=480
+window/size/viewport_height=270
+; el motor escala todo (mundo e interfaz) por un entero: nítido con cualquier ventana y cualquier densidad de píxel
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/stretch/scale_mode="integer"
+
+[input_devices]
+pointing/emulate_touch_from_mouse=false
+
+[rendering]
+
+environment/defaults/default_clear_color=Color(0.109804, 0.0705882, 0.156863, 1)
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/canvas_textures/default_texture_filter=0
+2d/snap/snap_2d_transforms_to_pixel=true
