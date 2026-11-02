@@ -65,10 +65,22 @@ var _camas: Array = []       # [animal, huella] de los sitios de noche ya repart
 var _tarea := {}             # granjero -> índice de la última tarea de su jornada (RUTINA)
 var _pendientes := {}        # granjero -> índices de las tareas que ya tocaban y esperan a que acabe la anterior
 var _espera_granjeros := 0.0 # con NIGHT, cuánto lleva el reloj esperando a que entren en casa
+# las estaciones (Game Off 2026, tema SHIFT): el decorado lleva este material; los animales no
+var mat_estacion := ShaderMaterial.new()
+var invierno := 0.0          # 0..1, lo que lee el shader (global uniform «invierno»)
+var invierno_meta := 0.0     # hacia dónde va: el cambio tarda CAMBIO_ESTACION segundos, píxel a píxel
+const CAMBIO_ESTACION := 2.0
 
 
 func _ready() -> void:
 	randomize()
+	mat_estacion.shader = load("res://estacion.gdshader")
+	if "--invierno" in OS.get_cmdline_user_args():
+		invierno = 1.0
+		invierno_meta = 1.0
+	if "--cambia" in OS.get_cmdline_user_args():
+		get_tree().create_timer(4.0).timeout.connect(cambia_estacion)   # para grabar el cambio de estación
+	RenderingServer.global_shader_parameter_set("invierno", invierno)
 	E = JSON.parse_string(FileAccess.get_file_as_string(DATOS + "escena.json"))
 	var suelo := Sprite2D.new()
 	suelo.texture = load(DATOS + "suelo.png")
@@ -109,6 +121,8 @@ func _ready() -> void:
 	ui.E = E
 	add_child(ui)
 	ui.noche_cambiada.connect(pon_noche)
+	ui.invierno_cambiado.connect(func(on): invierno_meta = 1.0 if on else 0.0)
+	ui.b_invierno.set_pressed_no_signal(invierno_meta > 0.5)
 	ui.sonido_cambiado.connect(pon_sonido)
 	ui.familia_elegida.connect(func(n):
 		elige(por_nombre[n])
@@ -601,6 +615,15 @@ func _piezas() -> void:
 		spr.texture = texturas[n]
 		spr.centered = false
 		spr.offset = Vector2(0, float(s[2]) - float(s[3]))
+		spr.material = mat_estacion
+		var ruta_nieve: String = DATOS + String(im["archivo"]).get_basename() + "_nieve.png"
+		if ResourceLoader.exists(ruta_nieve):
+			# tejado y paja enteros bajo la nieve (crítico del usuario 02-11)
+			var mat := mat_estacion.duplicate() as ShaderMaterial
+			mat.set_shader_parameter("mascara", load(ruta_nieve))
+			mat.set_shader_parameter("con_mascara", true)
+			mat.set_shader_parameter("capa", n in ["molino", "conejera", "gallinero_1", "patos_1"])
+			spr.material = mat
 		if n == "puerta_abierta" and E.has("puertas"):
 			# las puertas empiezan cerradas; se abren cuando llega alguien (ver _puertas)
 			var pe: Dictionary = E["puertas"]
@@ -632,6 +655,7 @@ func _piezas() -> void:
 		spr.texture = load(DATOS + a[0])
 		spr.centered = false
 		spr.offset = Vector2(0, float(a[2]) - float(a[3]))
+		spr.material = mat_estacion
 		nodo.add_child(spr)
 		mundo.add_child(nodo)
 	# nadie se para detrás de algo alto (casas, árboles, plantas grandes), donde sólo asomaría la cabeza
@@ -2599,6 +2623,8 @@ func _unhandled_input(ev: InputEvent) -> void:
 
 		elif ev.keycode == KEY_N:
 			ui.b_noche.button_pressed = not ui.b_noche.button_pressed
+		elif ev.keycode == KEY_I:
+			ui.b_invierno.button_pressed = not ui.b_invierno.button_pressed
 		elif ev.keycode == KEY_M:
 			ui.b_sonido.button_pressed = not ui.b_sonido.button_pressed
 		elif ev.keycode in [KEY_PLUS, KEY_KP_ADD, KEY_EQUAL]:
@@ -2653,6 +2679,7 @@ func _process(delta: float) -> void:
 
 func _process_de_verdad(delta: float) -> void:
 	reloj += delta
+	_estacion(delta)
 	_puertas(delta)
 	_patos_en_el_agua()
 	_reloj_del_dia(delta)
@@ -2722,3 +2749,22 @@ func _process_de_verdad(delta: float) -> void:
 	else:
 		ui.pista_sobre("", Rect2())
 	marco.queue_redraw()
+
+
+# ------------------------------------------------------------------------------------------------------ estaciones
+# SEASON (Game Off 2026, tema SHIFT): la granja pasa de la de siempre a la nevada y vuelve. El cambio va píxel a
+# píxel (trama del shader), nunca con fundido.
+func cambia_estacion() -> void:
+	invierno_meta = 0.0 if invierno_meta > 0.5 else 1.0
+	ui.b_invierno.set_pressed_no_signal(invierno_meta > 0.5)
+
+
+func es_invierno() -> bool:
+	return invierno_meta > 0.5
+
+
+func _estacion(delta: float) -> void:
+	if invierno == invierno_meta:
+		return
+	invierno = move_toward(invierno, invierno_meta, delta / CAMBIO_ESTACION)
+	RenderingServer.global_shader_parameter_set("invierno", invierno)

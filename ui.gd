@@ -39,6 +39,7 @@ signal familia_elegida(nombre: String)
 signal accion_elegida(anim: String)
 signal cerrar_ficha
 signal noche_cambiada(noche: bool)
+signal invierno_cambiado(invierno: bool)
 signal sonido_cambiado(on: bool)
 signal ver_en_visor(nombre: String)
 
@@ -52,6 +53,7 @@ var rotulo: TextureRect
 var placa_rotulo: PanelContainer
 var arriba: PanelContainer
 var b_noche: Button
+var b_invierno: Button
 var b_sonido: Button
 var abajo: PanelContainer
 var ayuda: HBoxContainer
@@ -445,6 +447,8 @@ func _arriba() -> void:
 	arriba.add_child(fila)
 	b_noche = _interruptor(fila, "NIGHT", "DAY / NIGHT  (N)", false)
 	b_noche.toggled.connect(func(on): noche_cambiada.emit(on))
+	b_invierno = _interruptor(fila, "WINTER", "SHIFT THE SEASON: SUMMER / WINTER  (I)", false)
+	b_invierno.toggled.connect(func(on): invierno_cambiado.emit(on))
 	b_sonido = _interruptor(fila, "SOUND", "ANIMAL SOUNDS ON / OFF  (M)", true)
 	b_sonido.toggled.connect(func(on): sonido_cambiado.emit(on))
 	var ayuda_b := _boton("?", false)

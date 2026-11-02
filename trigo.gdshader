@@ -3,6 +3,8 @@
 // El contorno no cambia: la silueta queda quieta. Píxeles enteros, nada de difuminados.
 shader_type canvas_item;
 
+#include "res://estacion.gdshaderinc"
+
 uniform sampler2D sube : filter_nearest;
 uniform vec2 tam = vec2(1280.0, 720.0);
 uniform float t = 0.0;   // segundos (el reloj de la escena, el mismo de las matas)
@@ -25,6 +27,7 @@ vec3 hsv_rgb(vec3 c) {
 void fragment() {
 	vec2 px = floor(UV * tam);
 	vec4 c = texture(TEXTURE, UV);
+	vec3 original = c.rgb;
 	vec4 s = texture(sube, (px + 0.5) / tam);
 	if (s.a > 0.5) {
 		float fase = (px.x * 0.8 + px.y * 0.6) / 300.0 - t / 10.0;
@@ -39,6 +42,15 @@ void fragment() {
 			h.y = min(1.0, h.y * (1.0 + 0.21 * dia));
 			h.z = min(1.0, h.z * (1.0 + 0.07 * dia));
 			c.rgb = hsv_rgb(h);
+		}
+	}
+	// en invierno el trigal y la hierba están bajo la nieve: se toma el color de origen, sin la ráfaga ni el realce
+	if (en_invierno(px)) {
+		c.rgb = suelo_invierno(original);
+		if (s.a > 0.5) {
+			// el trigal seco bajo la helada: gris azulado claro con motas blancas (crítico r2, 3)
+			float k = dot(original, vec3(0.299, 0.587, 0.114));
+			c.rgb = k > 0.62 ? NIEVE[5] : k > 0.45 ? NIEVE[4] : k > 0.3 ? NIEVE[3] : NIEVE[2];
 		}
 	}
 	c.rgb *= 1.0 - 0.08 * mojado;

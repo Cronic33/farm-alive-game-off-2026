@@ -41,6 +41,8 @@ const LUNA := Color8(236, 240, 250)
 const AZUL_NOCHE := Color8(10, 20, 48)   # #0a1430, sumado de noche bajo las luces (crítico 26-10, punto 2)
 const NEBLINA := Color8(200, 208, 224)   # #c8d0e0
 const LLUVIA := Color8(168, 184, 208)    # #a8b8d0
+const COPO := Color8(238, 243, 247)      # #eef3f7, la luz de la rampa de nieve del kit
+const COPO_SOMBRA := Color8(147, 170, 196)   # #93aac4
 # luciérnagas (crítico 26-10, punto 4): 32, también por el borde del trigal, el seto oeste y junto a la casa
 const LUCIERNAGAS := [Vector2(140, 560), Vector2(220, 600), Vector2(300, 690), Vector2(40, 540), Vector2(470, 620), Vector2(700, 640),
 	Vector2(560, 470), Vector2(860, 470), Vector2(1000, 640), Vector2(1180, 650), Vector2(120, 470), Vector2(250, 450),
@@ -114,6 +116,7 @@ func prepara(la_escena) -> void:
 	matas_nodo.z_index = -1
 	matas_nodo.draw.connect(_dibuja_matas)
 	escena.add_child(matas_nodo)
+	matas_nodo.material = escena.mat_estacion   # las matas con flores también pasan de estación
 	# la espuma de la orilla, en el motor (espuma.gdshader), bajo la corriente y los destellos
 	espuma = Sprite2D.new()
 	var lienzo_agua := PlaceholderTexture2D.new()
@@ -129,6 +132,7 @@ func prepara(la_escena) -> void:
 	escena.add_child(espuma)
 	suelo = Node2D.new()
 	suelo.z_index = -1
+	suelo.material = escena.mat_estacion
 	suelo.draw.connect(_dibuja_suelo)
 	escena.add_child(suelo)
 	_matas_estado.resize(E["matas"].size())
@@ -210,6 +214,7 @@ func pon_molino(spr: Sprite2D, tira_aspas: Texture2D, cuadros: int) -> void:
 	aspas.centered = false
 	aspas.offset = spr.offset
 	aspas.modulate = Color(0, 0, 0, 0)
+	aspas.material = spr.material
 	spr.get_parent().add_child(aspas)
 	spr.get_parent().move_child(aspas, spr.get_index() + 1)
 
@@ -330,6 +335,7 @@ func avanza(delta: float, oscuridad: float, ventanas: float) -> void:
 	var h: float = escena.hora
 	neblina = _franja(h, 555.0, 60.0, 15.0, 30.0)   # al alba y a primera hora
 	lluvia = _franja(h, 248.0, 292.0, 6.0, 8.0)     # una llovizna corta a media tarde, una vez por día
+	lluvia *= 1.0 - escena.invierno                   # en invierno no llueve: nieva
 	# el bloque de píxel: lo que mide un píxel de pantalla en el mundo (1 de cerca)
 	var s_antes := s
 	if escena.cam != null:
@@ -585,8 +591,9 @@ func _dibuja_alto_de_verdad() -> void:
 					alto.draw_rect(Rect2(xx, yy, s, s), col)
 	_dibuja_neblina()
 	_dibuja_lluvia()
-	if n > 0.4 or lluvia > 0.4:
-		return   # de noche o con la llovizna, sin bichos, mariposas, hojas ni polvo
+	_dibuja_nieve()
+	if n > 0.4 or lluvia > 0.4 or escena.invierno > 0.5:
+		return   # de noche, con la llovizna o en invierno, sin bichos, mariposas, hojas ni polvo
 	var f := TAU * fmod(t, L) / L
 	var tt := fmod(t, L)
 	# abejas: ochos pequeños sobre el huerto
@@ -716,6 +723,30 @@ func _dibuja_lluvia() -> void:
 		var y := fposmod(float((k * 397) % 720) + t * vel, recorrido) - 20.0
 		var x := fposmod(float((k * 733) % 1280) + y * 0.25, w)
 		alto.draw_rect(Rect2(floorf(x / s) * s, floorf(y / s) * s, s, 3.0 * s), col)
+
+
+func _dibuja_nieve() -> void:
+	## la nevada del invierno (Game Off, SHIFT): copos de 1 px y algunos en cruz de 3 px, que caen despacio y se mecen.
+	## Copo blanco con un píxel azul de la rampa de nieve debajo: sobre la nieve del suelo también se lee
+	var f := escena.invierno as float
+	if f <= 0.0:
+		return
+	var w := float(E["W"])
+	var h := float(E["H"])
+	for k in int(1500 * f):
+		var vel := 0.022 + 0.008 * float(k % 5)   # px por ms: unos 25-50 px por segundo
+		var recorrido := h + 40.0
+		var y := fposmod(float((k * 397) % 720) + t * vel, recorrido) - 20.0
+		var x := fposmod(float((k * 733) % 1280) + 6.0 * sin(t / 900.0 + k) + y * 0.08, w)
+		var xi := floorf(x / s) * s
+		var yi := floorf(y / s) * s
+		if k % 4 == 0:
+			alto.draw_rect(Rect2(xi - s, yi, 3.0 * s, s), COPO)
+			alto.draw_rect(Rect2(xi, yi - s, s, 3.0 * s), COPO)
+			alto.draw_rect(Rect2(xi, yi + 2.0 * s, s, s), COPO_SOMBRA)
+		else:
+			alto.draw_rect(Rect2(xi, yi, s, s), COPO)
+			alto.draw_rect(Rect2(xi, yi + s, s, s), COPO_SOMBRA)
 
 
 # ── lo que da luz de noche ────────────────────────────────────────────────────────────────────────────────────────────
