@@ -38,3 +38,7 @@ invierno={
 "type": "float",
 "value": 0.0
 }
+otono={
+"type": "float",
+"value": 0.0
+}

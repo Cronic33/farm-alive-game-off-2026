@@ -1,6 +1,6 @@
 # Farm, Alive — Game Off 2026
 
-A small browser toy about a living top-down farm: walk around (WASD) or let the camera wander, and watch every animal go through its day — eating, sleeping, wandering, calling. Open the viewer to follow one animal up close. Theme **SHIFT**: the farm shifts from day to night, and every animal shifts between behaviours on its own. Press **WINTER** (or I) and the season shifts too: the farm snows over pixel by pixel, roofs and haystacks get their snow layer, and the snowfall starts.
+A small browser toy about a living top-down farm: walk around (WASD) or let the camera wander, and watch every animal go through its day — eating, sleeping, wandering, calling. Open the viewer to follow one animal up close. Theme **SHIFT**: the farm shifts from day to night, and every animal shifts between behaviours on its own. Press the season button (or I) and the season shifts too, summer → autumn → winter: in autumn the grass turns gold and the leaves fall red and orange all over the farm; in winter it snows over pixel by pixel, roofs and haystacks get their snow layer, and the snowfall starts.
 
 Made with Godot 4. Play it in the browser on itch.io.
 

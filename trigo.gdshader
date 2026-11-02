@@ -52,6 +52,9 @@ void fragment() {
 			float k = dot(original, vec3(0.299, 0.587, 0.114));
 			c.rgb = k > 0.62 ? NIEVE[5] : k > 0.45 ? NIEVE[4] : k > 0.3 ? NIEVE[3] : NIEVE[2];
 		}
+	} else if (en_otono(px) && s.a < 0.5) {
+		// en otoño la hierba se seca (el trigal, que ya es de oro, se queda con su ráfaga)
+		c.rgb = suelo_otono(original, px);
 	}
 	c.rgb *= 1.0 - 0.08 * mojado;
 	COLOR = c;

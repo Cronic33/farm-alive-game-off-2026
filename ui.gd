@@ -39,7 +39,7 @@ signal familia_elegida(nombre: String)
 signal accion_elegida(anim: String)
 signal cerrar_ficha
 signal noche_cambiada(noche: bool)
-signal invierno_cambiado(invierno: bool)
+signal estacion_pulsada
 signal sonido_cambiado(on: bool)
 signal ver_en_visor(nombre: String)
 
@@ -447,8 +447,8 @@ func _arriba() -> void:
 	arriba.add_child(fila)
 	b_noche = _interruptor(fila, "NIGHT", "DAY / NIGHT  (N)", false)
 	b_noche.toggled.connect(func(on): noche_cambiada.emit(on))
-	b_invierno = _interruptor(fila, "WINTER", "SHIFT THE SEASON: SUMMER / WINTER  (I)", false)
-	b_invierno.toggled.connect(func(on): invierno_cambiado.emit(on))
+	b_invierno = _interruptor(fila, "SUMMER", "SHIFT THE SEASON: SUMMER / AUTUMN / WINTER  (I)", false)
+	b_invierno.toggled.connect(func(_on): estacion_pulsada.emit())
 	b_sonido = _interruptor(fila, "SOUND", "ANIMAL SOUNDS ON / OFF  (M)", true)
 	b_sonido.toggled.connect(func(on): sonido_cambiado.emit(on))
 	var ayuda_b := _boton("?", false)
@@ -468,6 +468,13 @@ func _filete() -> ColorRect:
 	f.custom_minimum_size = Vector2(1, 9)
 	f.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	return f
+
+
+func pon_estacion(nombre: String, encendido: bool) -> void:
+	## el botón de la estación dice en cuál está; el piloto, en latón fuera del verano
+	b_invierno.text = nombre
+	b_invierno.set_pressed_no_signal(encendido)
+	(b_invierno.get_meta("piloto") as ColorRect).color = LATON if encendido else LATON_HONDO
 
 
 func _interruptor(fila: HBoxContainer, texto: String, aviso: String, on: bool) -> Button:

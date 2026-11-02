@@ -28,6 +28,9 @@ const HOJAS_DE := [Vector2(30, 100), Vector2(62, 104), Vector2(126, 100), Vector
 	Vector2(746, 96), Vector2(784, 100), Vector2(20, 690)]
 const HOJA_COL := [[Color8(232, 186, 76), Color8(176, 120, 44)], [Color8(214, 130, 52), Color8(150, 82, 34)], [Color8(176, 196, 92), Color8(110, 140, 56)]]
 const SOMBRA_HOJA := Color8(54, 82, 40)
+# las del otoño, de la rampa HOJA_OTONO de estacion.gdshaderinc: [luz, sombra]
+const HOJA_OTONO_AIRE := [[Color8(212, 115, 47), Color8(138, 58, 30)], [Color8(181, 82, 42), Color8(92, 42, 30)],
+	[Color8(232, 154, 60), Color8(181, 82, 42)], [Color8(242, 194, 90), Color8(212, 115, 47)]]
 const VILANOS := [Vector2(800, 20), Vector2(860, 70), Vector2(930, 10), Vector2(1010, 40), Vector2(1090, 20), Vector2(1170, 60),
 	Vector2(1230, 30), Vector2(840, 140), Vector2(1150, 120)]
 const REMOLINO := Vector2(1112, 196)
@@ -592,6 +595,7 @@ func _dibuja_alto_de_verdad() -> void:
 	_dibuja_neblina()
 	_dibuja_lluvia()
 	_dibuja_nieve()
+	_dibuja_hojarasca()
 	if n > 0.4 or lluvia > 0.4 or escena.invierno > 0.5:
 		return   # de noche, con la llovizna o en invierno, sin bichos, mariposas, hojas ni polvo
 	var f := TAU * fmod(t, L) / L
@@ -643,14 +647,15 @@ func _dibuja_alto_de_verdad() -> void:
 					continue
 				_pf(alto, x, y, i, j, Color8(40, 30, 26) if fila[i] == "K" else m[2])
 	# hojas que se sueltan de las copas
+	var otono: bool = escena.otono > 0.5   # en otoño caen muchas más, y ninguna verde
 	for k in HOJAS_DE.size():
-		for j in 3:
-			var u := fmod(tt + k * 1100 + j * 2000, 6000.0) / 4000.0
+		for j in (8 if otono else 3):
+			var u := fmod(tt + k * 1100 + j * (750 if otono else 2000), 6000.0) / 4000.0
 			if u >= 1.0:
 				continue
 			var x: float = HOJAS_DE[k].x + (k * 13 + j * 17) % 20 - 10 + 44 * u + 4 * sin(u * 4 * PI + k)
 			var y: float = HOJAS_DE[k].y + 34 * u + 2 * sin(u * 6 * PI + j)
-			var cols: Array = HOJA_COL[(k + j) % 3]
+			var cols: Array = HOJA_COL[(k + j) % (2 if otono else 3)]
 			var xi := roundf(x)
 			var yi := roundf(y)
 			if s <= 1.0:
@@ -747,6 +752,30 @@ func _dibuja_nieve() -> void:
 		else:
 			alto.draw_rect(Rect2(xi, yi, s, s), COPO)
 			alto.draw_rect(Rect2(xi, yi + s, s, s), COPO_SOMBRA)
+
+
+func _dibuja_hojarasca() -> void:
+	## las hojas del otoño (usuario 02-11: «se nota muy poco»): por toda la granja caen hojas de 2 px, rojas, naranjas
+	## y doradas, que el viento lleva en diagonal y que giran (cambian de forma) mientras bajan
+	var f: float = escena.otono * (1.0 - escena.invierno)
+	if f <= 0.0:
+		return
+	var w := float(E["W"])
+	var h := float(E["H"])
+	for k in int(260 * f):
+		var vel := 0.016 + 0.006 * float(k % 4)   # px por ms: más despacio que la nieve
+		var recorrido := h + 40.0
+		var y := fposmod(float((k * 397) % 720) + t * vel, recorrido) - 20.0
+		var x := fposmod(float((k * 733) % 1280) + 14.0 * sin(t / 700.0 + k * 1.7) + y * 0.45, w)
+		var xi := floorf(x / s) * s
+		var yi := floorf(y / s) * s
+		var cols: Array = HOJA_OTONO_AIRE[k % HOJA_OTONO_AIRE.size()]
+		if (int(t / 200.0) + k) % 2:
+			alto.draw_rect(Rect2(xi, yi, 2.0 * s, s), cols[0])
+			alto.draw_rect(Rect2(xi + s, yi + s, s, s), cols[1])
+		else:
+			alto.draw_rect(Rect2(xi, yi, s, 2.0 * s), cols[0])
+			alto.draw_rect(Rect2(xi + s, yi + s, s, s), cols[1])
 
 
 # ── lo que da luz de noche ────────────────────────────────────────────────────────────────────────────────────────────

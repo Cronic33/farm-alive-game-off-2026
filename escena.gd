@@ -69,6 +69,10 @@ var _espera_granjeros := 0.0 # con NIGHT, cuánto lleva el reloj esperando a que
 var mat_estacion := ShaderMaterial.new()
 var invierno := 0.0          # 0..1, lo que lee el shader (global uniform «invierno»)
 var invierno_meta := 0.0     # hacia dónde va: el cambio tarda CAMBIO_ESTACION segundos, píxel a píxel
+var otono := 0.0             # lo mismo para el otoño (global uniform «otono»); el invierno va por encima
+var otono_meta := 0.0
+var estacion_i := 0          # 0 verano, 1 otoño, 2 invierno: el botón las va rotando
+const ESTACIONES := ["SUMMER", "AUTUMN", "WINTER"]
 const CAMBIO_ESTACION := 2.0
 
 
@@ -76,11 +80,17 @@ func _ready() -> void:
 	randomize()
 	mat_estacion.shader = load("res://estacion.gdshader")
 	if "--invierno" in OS.get_cmdline_user_args():
-		invierno = 1.0
-		invierno_meta = 1.0
+		estacion_i = 2
+	elif "--otono" in OS.get_cmdline_user_args():
+		estacion_i = 1
+	otono = 1.0 if estacion_i >= 1 else 0.0
+	otono_meta = otono
+	invierno = 1.0 if estacion_i == 2 else 0.0
+	invierno_meta = invierno
 	if "--cambia" in OS.get_cmdline_user_args():
 		get_tree().create_timer(4.0).timeout.connect(cambia_estacion)   # para grabar el cambio de estación
 	RenderingServer.global_shader_parameter_set("invierno", invierno)
+	RenderingServer.global_shader_parameter_set("otono", otono)
 	E = JSON.parse_string(FileAccess.get_file_as_string(DATOS + "escena.json"))
 	var suelo := Sprite2D.new()
 	suelo.texture = load(DATOS + "suelo.png")
@@ -121,8 +131,8 @@ func _ready() -> void:
 	ui.E = E
 	add_child(ui)
 	ui.noche_cambiada.connect(pon_noche)
-	ui.invierno_cambiado.connect(func(on): invierno_meta = 1.0 if on else 0.0)
-	ui.b_invierno.set_pressed_no_signal(invierno_meta > 0.5)
+	ui.estacion_pulsada.connect(cambia_estacion)
+	ui.pon_estacion(ESTACIONES[estacion_i], estacion_i > 0)
 	ui.sonido_cambiado.connect(pon_sonido)
 	ui.familia_elegida.connect(func(n):
 		elige(por_nombre[n])
@@ -2624,7 +2634,7 @@ func _unhandled_input(ev: InputEvent) -> void:
 		elif ev.keycode == KEY_N:
 			ui.b_noche.button_pressed = not ui.b_noche.button_pressed
 		elif ev.keycode == KEY_I:
-			ui.b_invierno.button_pressed = not ui.b_invierno.button_pressed
+			cambia_estacion()
 		elif ev.keycode == KEY_M:
 			ui.b_sonido.button_pressed = not ui.b_sonido.button_pressed
 		elif ev.keycode in [KEY_PLUS, KEY_KP_ADD, KEY_EQUAL]:
@@ -2752,11 +2762,17 @@ func _process_de_verdad(delta: float) -> void:
 
 
 # ------------------------------------------------------------------------------------------------------ estaciones
-# SEASON (Game Off 2026, tema SHIFT): la granja pasa de la de siempre a la nevada y vuelve. El cambio va píxel a
-# píxel (trama del shader), nunca con fundido.
+# SEASON (Game Off 2026, tema SHIFT): la granja rota verano → otoño → invierno → verano. El cambio va píxel a píxel
+# (trama del shader), nunca con fundido.
 func cambia_estacion() -> void:
-	invierno_meta = 0.0 if invierno_meta > 0.5 else 1.0
-	ui.b_invierno.set_pressed_no_signal(invierno_meta > 0.5)
+	estacion_i = (estacion_i + 1) % 3
+	otono_meta = 1.0 if estacion_i >= 1 else 0.0
+	invierno_meta = 1.0 if estacion_i == 2 else 0.0
+	if estacion_i == 0 and invierno >= 1.0:
+		# del invierno al verano: bajo la nieve ya no queda otoño, así que lo que se destapa sale verde
+		otono = 0.0
+		RenderingServer.global_shader_parameter_set("otono", otono)
+	ui.pon_estacion(ESTACIONES[estacion_i], estacion_i > 0)
 
 
 func es_invierno() -> bool:
@@ -2764,7 +2780,9 @@ func es_invierno() -> bool:
 
 
 func _estacion(delta: float) -> void:
-	if invierno == invierno_meta:
-		return
-	invierno = move_toward(invierno, invierno_meta, delta / CAMBIO_ESTACION)
-	RenderingServer.global_shader_parameter_set("invierno", invierno)
+	if invierno != invierno_meta:
+		invierno = move_toward(invierno, invierno_meta, delta / CAMBIO_ESTACION)
+		RenderingServer.global_shader_parameter_set("invierno", invierno)
+	if otono != otono_meta:
+		otono = move_toward(otono, otono_meta, delta / CAMBIO_ESTACION)
+		RenderingServer.global_shader_parameter_set("otono", otono)
